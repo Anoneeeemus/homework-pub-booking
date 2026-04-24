@@ -38,11 +38,6 @@ class ValidationFailed(ValueError):  # noqa: N818
 
     The run() method in RasaStructuredHalf catches this and returns a
     HalfResult with next_action=escalate rather than crashing.
-
-    Named `ValidationFailed` (not `ValidationError`) to match the
-    dialogue-language convention used in Rasa's own codebase. The
-    noqa above suppresses ruff's N818 rule, which prefers the
-    `Error` suffix.
     """
 
 

@@ -189,25 +189,85 @@ def run_mechanical(only: str | None) -> LayerResult:
 
 
 def run_behavioural(only: str | None) -> LayerResult:
+    """Run each exercise's scenario directly. Public pytest files are a
+    scaffold check only — they pass as long as structure is right, which
+    is true on a fresh unimplemented checkout too. To genuinely measure
+    "does the student's code work", we invoke the scenario module.
+
+    Each scenario module exits non-zero when its TODOs aren't done
+    (via the NotImplementedError propagating out, or via the friendly
+    preflight that returns exit 3 for Ex5). rc=0 means the whole
+    scenario ran end-to-end.
+    """
     layer = LayerResult(name="behavioural")
 
     if only in (None, "ex5"):
         rc, _, _ = _run(["uv", "run", "python", "-m", "starter.edinburgh_research.run"])
-        layer.checks.append(_check("ex5_scenario_runs_end_to_end", rc == 0, 6))
+        layer.checks.append(
+            _check(
+                "ex5_scenario_runs_end_to_end",
+                rc == 0,
+                6,
+                "ex5 ran cleanly"
+                if rc == 0
+                else f"ex5 exited {rc} (tools/integrity not yet implemented)",
+            )
+        )
 
     if only in (None, "ex6"):
-        # Local doesn't spin Rasa; we run the validator normalisation tests
-        # as a proxy.
-        rc, _, _ = _run(["uv", "run", "pytest", "tests/public/test_ex6_scaffold.py", "-q"])
-        layer.checks.append(_check("ex6_structured_half_accepts_valid_booking", rc == 0, 4))
+        # Run the Rasa half directly. Unimplemented RasaStructuredHalf.run
+        # raises NotImplementedError → exit 1. A working impl in offline
+        # mode (no real Rasa) should still be able to complete because
+        # we provide a mock-server switch; exit 0 = working.
+        rc, _, _ = _run(["uv", "run", "python", "-m", "starter.rasa_half.run"])
+        layer.checks.append(
+            _check(
+                "ex6_structured_half_runs",
+                rc == 0,
+                4,
+                "ex6 ran cleanly"
+                if rc == 0
+                else f"ex6 exited {rc} (RasaStructuredHalf.run not yet implemented)",
+            )
+        )
 
     if only in (None, "ex7"):
-        rc, _, _ = _run(["uv", "run", "pytest", "tests/public/test_ex7_scaffold.py", "-q"])
-        layer.checks.append(_check("ex7_round_trip_completes", rc == 0, 6))
+        # Run the handoff bridge directly. Unimplemented → NotImplementedError.
+        rc, _, _ = _run(["uv", "run", "python", "-m", "starter.handoff_bridge.run"])
+        layer.checks.append(
+            _check(
+                "ex7_round_trip_completes",
+                rc == 0,
+                6,
+                "ex7 ran cleanly"
+                if rc == 0
+                else f"ex7 exited {rc} (HandoffBridge wiring not yet implemented)",
+            )
+        )
 
     if only in (None, "ex8"):
-        rc, _, _ = _run(["uv", "run", "pytest", "tests/public/test_ex8_scaffold.py", "-q"])
-        layer.checks.append(_check("ex8_trace_has_utterance_events", rc == 0, 3))
+        # The actual Ex8 work is in run_voice_mode (STT/TTS wiring).
+        # run_text_mode is shipped complete so students can see the flow.
+        try:
+            import inspect
+
+            from starter.voice_pipeline.voice_loop import run_voice_mode
+
+            src = inspect.getsource(run_voice_mode)
+            unimplemented = "raise NotImplementedError" in src or len(src.strip().splitlines()) < 10
+        except Exception:  # noqa: BLE001
+            unimplemented = True
+
+        layer.checks.append(
+            _check(
+                "ex8_voice_loop_implemented",
+                not unimplemented,
+                3,
+                "voice loop implemented (CI runs full integration)"
+                if not unimplemented
+                else "voice_loop.run_voice_mode still a stub",
+            )
+        )
 
     return layer
 

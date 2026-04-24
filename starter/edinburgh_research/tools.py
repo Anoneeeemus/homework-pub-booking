@@ -14,26 +14,20 @@ The grader checks for:
 
 from __future__ import annotations
 
-# Imports below are intentionally provided as "scaffolding" — your TODO
-# implementations will need most of them. The `noqa: F401` comments
-# silence the "unused import" lint until you wire them up. Once you
-# implement the tools, remove any imports you genuinely don't end up using.
-import json  # noqa: F401  (needed: students load sample_data/*.json)
+import json  # noqa: F401
 from pathlib import Path
-from typing import Any  # noqa: F401  (needed: ToolCallRecord output type)
+from typing import Any  # noqa: F401
 
-from sovereign_agent._internal.atomic import (
-    atomic_write_text,  # noqa: F401  (needed: generate_flyer uses this)
-)
+from sovereign_agent._internal.atomic import atomic_write_text  # noqa: F401
 from sovereign_agent.errors import IOError as SovereignIOError  # noqa: F401
-from sovereign_agent.errors import ToolError  # noqa: F401  (needed: raise this on bad input)
+from sovereign_agent.errors import ToolError  # noqa: F401
 from sovereign_agent.session.directory import Session
 from sovereign_agent.tools.registry import ToolRegistry, ToolResult, _RegisteredTool
 
 from starter.edinburgh_research.integrity import (
-    _TOOL_CALL_LOG,  # noqa: F401  (needed: the log every tool appends to)
+    _TOOL_CALL_LOG,  # noqa: F401
     ToolCallRecord,  # noqa: F401
-    record_tool_call,  # noqa: F401  (needed: students call this at end of each tool)
+    record_tool_call,  # noqa: F401
 )
 
 _SAMPLE_DATA = Path(__file__).parent / "sample_data"

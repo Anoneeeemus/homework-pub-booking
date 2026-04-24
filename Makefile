@@ -33,8 +33,31 @@ setup: ## Install Python 3.12, deps, and create .env from the template
 	  exit 1; \
 	}
 	@$(UV) sync --all-groups
-	@[ -f .env ] || { cp .env.example .env && echo "✓ Created .env from template. Edit it and set NEBIUS_KEY."; }
+	@if [ -f .env ]; then \
+	  echo "✓ .env already exists (not overwriting)."; \
+	elif [ -f .env.example ]; then \
+	  cp .env.example .env && echo "✓ Created .env from template. Edit it and set NEBIUS_KEY."; \
+	else \
+	  echo "✗ Cannot create .env — .env.example is missing from your checkout."; \
+	  echo ""; \
+	  echo "  Your tarball extract didn't include dotfiles. Fix with one of:"; \
+	  echo "    1. Re-extract with 'tar xzvf homework-pub-booking.tar.gz'"; \
+	  echo "       — look for '.env.example' in the output to confirm."; \
+	  echo "    2. Or run 'make env-bootstrap' — it regenerates .env.example"; \
+	  echo "       from a bundled fallback inside the Makefile."; \
+	  exit 1; \
+	fi
 	@echo "✓ make setup done. Next: edit .env, then run 'make verify'."
+
+.PHONY: env-bootstrap
+env-bootstrap: ## Regenerate .env.example from a bundled fallback (use if .env.example is missing)
+	@if [ -f .env.example ]; then \
+	  echo "ℹ .env.example already exists — not overwriting."; \
+	  echo "  To force-regenerate: rm .env.example && make env-bootstrap"; \
+	else \
+	  $(UV) run python scripts/write_env_example.py; \
+	  echo "✓ Wrote .env.example. Now run 'make setup'."; \
+	fi
 
 .PHONY: verify
 verify: ## Run preflight + a real 1-token LLM call; prints green ✓ or points you at the right doc
@@ -120,3 +143,43 @@ doctor: ## Like sovereign-agent doctor but scoped to this repo
 .PHONY: ci
 ci: lint format-check test ## Everything CI runs on a PR, in order
 	@echo "✓ make ci green — your scaffold still compiles and tests pass."
+
+# ─── educator-only targets (hidden from students) ───────────────────
+# These require solution/ to exist. Students don't have it; running
+# any of these from a student's checkout will print a helpful error.
+
+.PHONY: educator-apply-solution
+educator-apply-solution: ## [EDUCATOR] Copy solution/ over starter/ for validation
+	@if [ ! -d solution ]; then \
+	  echo "✗ solution/ not found — this target is educator-only."; \
+	  echo "  Solutions live in a private sibling repo and are copied in manually."; \
+	  exit 1; \
+	fi
+	@bash solution/apply_solution.sh
+
+.PHONY: educator-reset
+educator-reset: ## [EDUCATOR] Restore starter/ and answers/ from .educator_backup/
+	@if [ ! -d .educator_backup ]; then \
+	  echo "✗ .educator_backup/ not found. Did you ever run educator-apply-solution?"; \
+	  exit 1; \
+	fi
+	@rm -rf starter answers
+	@cp -r .educator_backup/starter starter
+	@cp -r .educator_backup/answers answers
+	@echo "✓ starter/ and answers/ restored from .educator_backup/"
+
+.PHONY: educator-validate
+educator-validate: ## [EDUCATOR] Back up, apply solution, run all scenarios, grade, restore
+	@if [ ! -d solution ]; then \
+	  echo "✗ solution/ not found — this target is educator-only."; \
+	  exit 1; \
+	fi
+	@$(UV) run python scripts/educator_validate.py
+
+.PHONY: educator-backup
+educator-backup: ## [EDUCATOR] Snapshot starter/ and answers/ to .educator_backup/
+	@rm -rf .educator_backup
+	@mkdir .educator_backup
+	@cp -r starter .educator_backup/starter
+	@cp -r answers .educator_backup/answers
+	@echo "✓ starter/ and answers/ snapshotted to .educator_backup/"
